@@ -29,20 +29,26 @@ public partial class MainPage : ContentPage
 		InitializeAsync();
 	}
 
-	private async void InitializeAsync() 
+	private async void InitializeAsync()
 	{
 		LocalIPAddress = await GetLocalIP();
 		Console.WriteLine($"Local Device IP: {LocalIPAddress}");
 	}
 
-	private static async Task<string> GetLocalIP() 
+	private async void DeviceListView_Loaded(object sender, EventArgs e)
+	{
+		await ScanNetwork();
+		DeviceListView.ItemsSource = Devices;
+	}
+
+	private static async Task<string> GetLocalIP()
 	{
 		string localIP = "Not Available";
 
 		IPHostEntry? host = await Dns.GetHostEntryAsync(Dns.GetHostName());
 		IPAddress? ip = host.AddressList.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork);
 
-		if (ip != null) 
+		if (ip != null)
 		{
 			localIP = ip.ToString();
 		}
@@ -50,54 +56,66 @@ public partial class MainPage : ContentPage
 		return localIP;
 	}
 
-	private static async Task<string> GetPublicIP() 
+	private static async Task<string> GetPublicIP()
 	{
 		try
-        {
-            using (HttpClient client = new())
-            {
-                string ip = await client.GetStringAsync("https://api.ipify.org");
-                return ip;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-            return "Unable to get public IP.";
-        }
+		{
+			using (HttpClient client = new())
+			{
+				string ip = await client.GetStringAsync("https://api.ipify.org");
+				return ip;
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error: {ex.Message}");
+			return "Unable to get public IP.";
+		}
 	}
 
-	private static async Task<string> GetDeviceName(string ip) 
+	private static async Task<string> GetDeviceName(string ip)
 	{
 		try
-        {
-            IPHostEntry hostEntry = await Dns.GetHostEntryAsync(ip);
+		{
+			IPHostEntry hostEntry = await Dns.GetHostEntryAsync(ip);
 
-            string deviceName = hostEntry.HostName;
+			string deviceName = hostEntry.HostName;
 			return deviceName;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error: {ex.Message}");
 			return string.Empty;
-        }
+		}
 	}
 
-	private async Task ScanNetwork() 
-	{ 
+	private void ToggleSpinner(bool toggle)
+	{
+		MainThread.BeginInvokeOnMainThread(() =>
+		{
+			LoadingSpinner.IsVisible = toggle;
+			LoadingSpinner.IsRunning = toggle;
+			DeviceListView.IsVisible = !toggle;
+		});
+	}
+
+	private async Task ScanNetwork()
+	{
 		string privateIp = "192.168.1.1";
 		string subnet = privateIp[..privateIp.LastIndexOf('.')];
-        
-        Console.WriteLine($"Scanning subnet: {subnet}.0/24");
-		
+
+		Console.WriteLine($"Scanning subnet: {subnet}.0/24");
+
+		ToggleSpinner(true);
 
 		List<Task> tasks = [];
 
-		try 
+		try
 		{
-			if (Devices != null && Devices.Any()) 
+			if (Devices != null && Devices.Any())
 			{
-				MainThread.BeginInvokeOnMainThread(() => {
+				MainThread.BeginInvokeOnMainThread(() =>
+				{
 					Devices.Clear();
 				});
 			}
@@ -123,9 +141,9 @@ public partial class MainPage : ContentPage
 							DeviceName = await GetDeviceName(ip)
 						};
 
-						if (!device.IPAddress.Equals("192.168.1.1") && !device.IPAddress.Equals(LocalIPAddress)) 
+						if (!device.IPAddress.Equals("192.168.1.1"))
 						{
-							MainThread.BeginInvokeOnMainThread(() => 
+							MainThread.BeginInvokeOnMainThread(() =>
 							{
 								Devices.Add(device);
 							});
@@ -134,50 +152,51 @@ public partial class MainPage : ContentPage
 				}));
 			}
 		}
-		catch (Exception ex) 
+		catch (Exception ex)
 		{
 			Console.WriteLine("Error occured while scanning the network: " + ex.Message);
 		}
 
 
 		await Task.WhenAll(tasks);
+		ToggleSpinner(false);
 		Console.WriteLine("Finished scanning the subnet.");
 	}
 
-	private async void OnScanButtonClicked(object sender, EventArgs e) 
+	private async void OnScanButtonClicked(object sender, EventArgs e)
 	{
 		await ScanNetwork();
 		DeviceListView.ItemsSource = Devices;
 	}
 
 	private void DeviceListView_ItemSelected(object sender, SelectedItemChangedEventArgs e)
-    {
+	{
 		Device device = e.SelectedItem as Device;
 		SelectedDevice = device;
-    }
+	}
 
-	private async void OnLockButtonClicked(object sender, EventArgs e) 
+	private async void OnLockButtonClicked(object sender, EventArgs e)
 	{
 		string password = PasswordEntry.Text;
-		if (!string.IsNullOrWhiteSpace(password)) 
+		if (!string.IsNullOrWhiteSpace(password))
 		{
 			string response = await SendLockCommand(password);
 			ResponseLabel.Text = response;
 		}
 	}
 
-	private async Task<string> SendLockCommand(string pwd) 
+	private async Task<string> SendLockCommand(string pwd)
 	{
 		string response = string.Empty;
-		try 
+		try
 		{
-			if (SelectedDevice != null) 
+			if (SelectedDevice != null)
 			{
-				using (TcpClient client = new(SelectedDevice.IPAddress, 8080)) 
+				using (TcpClient client = new(SelectedDevice.IPAddress, 8080))
 				{
 					client.ReceiveTimeout = 10000;
 
-					using (NetworkStream stream = client.GetStream()) 
+					using (NetworkStream stream = client.GetStream())
 					{
 						await SendCommand(stream, pwd);
 						await ReadResponse(stream);
@@ -186,7 +205,7 @@ public partial class MainPage : ContentPage
 			}
 			else throw new Exception("No device selected.");
 		}
-		catch (Exception ex) 
+		catch (Exception ex)
 		{
 			response = $"Error: {ex.Message}";
 		}
@@ -194,22 +213,22 @@ public partial class MainPage : ContentPage
 		return response;
 	}
 
-	private static async Task SendCommand(NetworkStream stream , string pwd) 
+	private static async Task SendCommand(NetworkStream stream, string pwd)
 	{
 		string message = $"{Lock}:{pwd}";
 		byte[] data = Encoding.UTF8.GetBytes(message);
 		await stream.WriteAsync(data, 0, data.Length);
 	}
 
-	private static async Task<string> ReadResponse(NetworkStream stream) 
+	private static async Task<string> ReadResponse(NetworkStream stream)
 	{
-		try 
+		try
 		{
 			byte[] buffer = new byte[1024];
 			int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
 			return Encoding.UTF8.GetString(buffer, 0, bytesRead);
 		}
-		catch (Exception ex) 
+		catch (Exception ex)
 		{
 			return ex.Message;
 		}
