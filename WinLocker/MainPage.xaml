@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="WinLocker.MainPage">
+
+    <ScrollView>
+        <StackLayout Padding="10">
+            <Entry Margin="10" x:Name="PasswordEntry" Placeholder="Enter Password" />
+            <Button Margin="5" Text="Lock Computer" Clicked="OnLockButtonClicked" />
+            <Label Margin="10" x:Name="ResponseLabel" Text="" />
+
+            <Button Margin="10" Text="Scan Network" Clicked="OnScanButtonClicked" />
+
+            <ListView x:Name="DeviceListView" ItemSelected="DeviceListView_ItemSelected" ItemsSource="{Binding Device}">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <ViewCell>
+                            <Grid Padding="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Label Grid.Column="1"
+                                    Text="{Binding IPAddress}"
+                                    FontAttributes="Bold" />
+                                <Label Grid.Row="1"
+                                    Grid.Column="1"
+                                    Text="{Binding DeviceName}"
+                                    FontAttributes="Italic"
+                                    VerticalOptions="End" />
+                            </Grid>
+                        </ViewCell>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </StackLayout>
+    </ScrollView>
+
+</ContentPage>
