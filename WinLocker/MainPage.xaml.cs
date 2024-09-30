@@ -39,11 +39,9 @@ public partial class MainPage : ContentPage
 	{
 		try
 		{
-			using (HttpClient client = new())
-			{
-				string ip = await client.GetStringAsync("https://api.ipify.org");
-				return ip;
-			}
+			using HttpClient client = new();
+			string ip = await client.GetStringAsync("https://api.ipify.org");
+			return ip;
 		}
 		catch (Exception ex)
 		{
@@ -172,16 +170,14 @@ public partial class MainPage : ContentPage
 		{
 			if (SelectedDevice != null)
 			{
-				using (TcpClient client = new(SelectedDevice.IPAddress, 8080))
-				{
-					client.ReceiveTimeout = 10000;
+				using TcpClient client = new(SelectedDevice.IPAddress, 8080);
 
-					using (NetworkStream stream = client.GetStream())
-					{
-						await SendCommand(stream, pwd);
-						await ReadResponse(stream);
-					}
-				}
+				client.ReceiveTimeout = 10000;
+
+				using NetworkStream stream = client.GetStream();
+
+				await SendCommand(stream, pwd);
+				await ReadResponse(stream);
 			}
 			else throw new Exception("No device selected.");
 		}
