@@ -17,8 +17,6 @@ public partial class MainPage : ContentPage
 	/// Lock command string.
 	/// </summary>
 	private const string Lock = "LOCK";
-	private const string UnavailableIP = "Not Available";
-	private string LocalIPAddress = UnavailableIP;
 	public readonly ObservableCollection<Device> Devices = [];
 	private Device? SelectedDevice;
 
@@ -26,13 +24,6 @@ public partial class MainPage : ContentPage
 	{
 		InitializeComponent();
 		BindingContext = new Device();
-		InitializeAsync();
-	}
-
-	private async void InitializeAsync()
-	{
-		LocalIPAddress = await GetLocalIP();
-		Console.WriteLine($"Local Device IP: {LocalIPAddress}");
 	}
 
 	private async void DeviceListView_Loaded(object sender, EventArgs e)
@@ -41,21 +32,9 @@ public partial class MainPage : ContentPage
 		DeviceListView.ItemsSource = Devices;
 	}
 
-	private static async Task<string> GetLocalIP()
-	{
-		string localIP = "Not Available";
-
-		IPHostEntry? host = await Dns.GetHostEntryAsync(Dns.GetHostName());
-		IPAddress? ip = host.AddressList.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork);
-
-		if (ip != null)
-		{
-			localIP = ip.ToString();
-		}
-
-		return localIP;
-	}
-
+	/// <summary>
+	/// Unused for now.
+	/// </summary>
 	private static async Task<string> GetPublicIP()
 	{
 		try
@@ -136,12 +115,11 @@ public partial class MainPage : ContentPage
 
 						Device device = new()
 						{
-							ID = Devices.LastOrDefault()?.ID + 1 ?? 1,
 							IPAddress = ip,
 							DeviceName = await GetDeviceName(ip)
 						};
 
-						if (!device.IPAddress.Equals("192.168.1.1"))
+						if (device.IPAddress != "192.168.1.1" && Devices != null)
 						{
 							MainThread.BeginInvokeOnMainThread(() =>
 							{
@@ -171,14 +149,16 @@ public partial class MainPage : ContentPage
 
 	private void DeviceListView_ItemSelected(object sender, SelectedItemChangedEventArgs e)
 	{
-		Device device = e.SelectedItem as Device;
-		SelectedDevice = device;
+		if (e.SelectedItem is Device device)
+		{
+			SelectedDevice = device;
+		}
 	}
 
 	private async void OnLockButtonClicked(object sender, EventArgs e)
 	{
 		string password = PasswordEntry.Text;
-		if (!string.IsNullOrWhiteSpace(password))
+		if (!string.IsNullOrEmpty(password))
 		{
 			string response = await SendLockCommand(password);
 			ResponseLabel.Text = response;
