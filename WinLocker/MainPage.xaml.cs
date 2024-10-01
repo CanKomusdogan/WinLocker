@@ -91,10 +91,7 @@ public partial class MainPage : ContentPage
 		{
 			if (Devices != null && Devices.Any())
 			{
-				MainThread.BeginInvokeOnMainThread(() =>
-				{
-					Devices.Clear();
-				});
+				MainThread.BeginInvokeOnMainThread(Devices.Clear);
 			}
 
 			// Scan the subnet
